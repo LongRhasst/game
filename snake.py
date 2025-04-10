@@ -1,7 +1,7 @@
 
 import pygame,sys,random
 from pygame.math import Vector2
-import connect
+from connect import CONNECT
 class SNAKE:
 	def __init__(self):
 		self.body = [Vector2(5,10),Vector2(4,10),Vector2(3,10)]
@@ -140,20 +140,76 @@ class MAIN:
 		for block in self.snake.body[1:]:
 			if block == self.snake.body[0]:
 				self.game_over()
-		
-	def save_score(self):
-		nickname = input("Enter your nickname: ")
-		score = len(self.snake.body) - 3
-		connect.insert(nickname, score)
-		print("Score saved successfully!")
-	
+
+	def save_score(self, score):
+		SCREEN = pygame.display.set_mode((1280, 720))
+		pygame.display.set_caption("Save Score")
+
+		game_font = pygame.font.Font(None, 60)
+		input_box = pygame.Rect(490, 400, 300, 60)
+		color_inactive = pygame.Color('black')
+		color_active = pygame.Color('dodgerblue2')
+		color = color_inactive
+		active = False
+		text = ''
+		clock = pygame.time.Clock()
+
+		while True:
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					pygame.quit()
+					sys.exit()  # Or sys.exit()
+
+				if event.type == pygame.MOUSEBUTTONDOWN:
+					# If the user clicked on the input_box rect
+					if input_box.collidepoint(event.pos):
+						active = not active
+					else:
+						active = False
+					color = color_active if active else color_inactive
+
+				if event.type == pygame.KEYDOWN:
+					if active:
+						if event.key == pygame.K_RETURN:
+							connect = CONNECT()
+							connect.insert(text, score)
+							connect.close()
+							# Here you can add logic to display a message that the score has been saved
+							alert_surface = game_font.render("Score saved!", True, pygame.Color('green'))
+							SCREEN.blit(alert_surface, (490, 500))
+							
+							# Save the name and score logic goes here
+							return
+						elif event.key == pygame.K_BACKSPACE:
+							text = text[:-1]
+						else:
+							text += event.unicode
+
+			SCREEN.fill(pygame.Color('white'))
+			save_text = game_font.render("Enter your name:", True, pygame.Color('black'))
+			SCREEN.blit(save_text, (490, 330))
+
+			# Render the current text.
+			txt_surface = game_font.render(text, True, color)
+			width = max(300, txt_surface.get_width()+10)
+			input_box.w = width
+			SCREEN.blit(txt_surface, (input_box.x+5, input_box.y+10))
+			pygame.draw.rect(SCREEN, color, input_box, 2)
+
+			pygame.display.flip()
+			clock.tick(30)
+			
 	def game_over(self):
-		self.save_score()
+		length = len(self.snake.body) - 3
+		if length <= 0:
+			self.snake.reset()
+		else:
+			self.save_score(length)
 
 	def draw_grass(self):
 		grass_color = (167,209,61)
 		for row in range(cell_number):
-			if row % 2 == 0: 
+			if row % 2 == 0:
 				for col in range(cell_number):
 					if col % 2 == 0:
 						grass_rect = pygame.Rect(col * cell_size,row * cell_size,cell_size,cell_size)
