@@ -7,6 +7,9 @@ from snake import MAIN
 
 session = SessionLocal()
 
+pygame.mixer.init()
+click_sound = pygame.mixer.Sound("Sound/click.mp3")
+
 SCREEN = pygame.display.set_mode((1280, 850))
 pygame.display.set_caption("Menu")
 
@@ -27,6 +30,8 @@ def play():
     pygame.time.set_timer(SCREEN_UPDATE,150)
 
     main_game = MAIN()
+    pygame.mixer.music.load("Sound/bgm.mp3")
+    pygame.mixer.music.play(-1)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -75,6 +80,7 @@ def options():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if OPTIONS_BACK.checkForInput(OPTIONS_MOUSE_POS):
+                    click_sound.play()
                     main_menu()
 
         pygame.display.update()
@@ -115,6 +121,7 @@ def show_high_score():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if SCORE_BACK.checkForInput(SCORE_MOUSE_POS):
+                    click_sound.play()
                     session.close()
                     main_menu()
 
@@ -151,12 +158,17 @@ def main_menu():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    click_sound.play()
                     play()
                 if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    click_sound.play()
                     options()
                 if SCORE_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    click_sound.play()
                     show_high_score()
                 if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    click_sound.play()
+                    pygame.time.delay(200)
                     pygame.quit()
                     sys.exit()
         pygame.display.update()

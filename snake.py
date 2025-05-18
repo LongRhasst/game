@@ -180,6 +180,8 @@ class MAIN:
                 self.game_over()
 
     def game_over(self):
+        pygame.mixer.music.stop()
+        pygame.mixer.Sound('Sound/game_over.mp3').play()
         self.game_active = False
         score = len(self.snake.body) - 3
         
