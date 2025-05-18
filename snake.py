@@ -209,7 +209,7 @@ class MAIN:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         try:
-                            new_score = high_score(name=String, high_score=score)
+                            new_score = high_score(name=text, high_score=score)
                             session.add(new_score)
                             session.commit()
                             saving = False
