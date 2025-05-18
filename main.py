@@ -1,10 +1,13 @@
 import pygame, sys
 from button import Button
-from connect import CONNECT
 from snake import *
-pygame.init()
+from connect import SessionLocal
+from databse import high_score
+from snake import MAIN
 
-SCREEN = pygame.display.set_mode((1280, 720))
+session = SessionLocal()
+
+SCREEN = pygame.display.set_mode((1280, 850))
 pygame.display.set_caption("Menu")
 
 BG = pygame.image.load("assets/Background.png")
@@ -75,45 +78,48 @@ def options():
                     main_menu()
 
         pygame.display.update()
-        
-def high_score():
+
+def show_high_score():
     while True:
         SCORE_MOUSE_POS = pygame.mouse.get_pos()
-        SCREEN.fill("white")
+        SCREEN.blit(BG, (0, 0))  # ✅ Hiển thị background
 
-        # Initialize SCORE_TEXT
-        SCORE_TEXT = get_font(45).render("HIGH SCORE", True, "Black")
+        SCORE_TEXT = get_font(45).render("HIGH SCORE", True, "#b68f40")
         SCORE_RECT = SCORE_TEXT.get_rect(center=(640, 100))
         SCREEN.blit(SCORE_TEXT, SCORE_RECT)
-        
-        SCORE_BACK = Button(image=None, pos=(640, 460),
-                            text_input="BACK", font=get_font(55), base_color="Black", hovering_color="Green")
+
+        SCORE_BACK = Button(
+            image=None, pos=(640, 700),
+            text_input="BACK", font=get_font(55),
+            base_color="Black", hovering_color="#b68f40"
+        )
         SCORE_BACK.changeColor(SCORE_MOUSE_POS)
         SCORE_BACK.update(SCREEN)
-        
-        score = CONNECT()
-        ranking = score.select()
-        for i, record in enumerate(ranking):
-            monospaced_font = pygame.font.SysFont("Courier", 45)  # Replace with "Consolas" if preferred
-            name_text = monospaced_font.render(str(i+1), True, "Black")
-            score_text = monospaced_font.render(str(record[1]), True, "Black")
-            date_text = monospaced_font.render(str(record[2]), True, "Black")
-            
-            # Display each column with proper spacing
-            SCREEN.blit(name_text, (300, 150 + i * 50))  # Name column at x=300
-            SCREEN.blit(score_text, (600, 150 + i * 50))  # Score column at x=600
-            SCREEN.blit(date_text, (900, 150 + i * 50))  # Date column at x=900
+
+        score = session.query(high_score).order_by(high_score.high_score.desc()).limit(10).all()
+
+        for i, record in enumerate(score):
+            monospaced_font = pygame.font.SysFont("Courier", 45)
+            # Hiển thị: STT | Score | Name
+            name_text = monospaced_font.render(str(i + 1), True, "#d7fcd4")
+            score_text = monospaced_font.render(str(record.high_score), True,"#d7fcd4")
+            date_text = monospaced_font.render(str(record.name), True, "#d7fcd4")
+
+            SCREEN.blit(name_text, (300, 150 + i * 50))    # STT
+            SCREEN.blit(score_text, (600, 150 + i * 50))   # Score
+            SCREEN.blit(date_text, (900, 150 + i * 50))    # Name
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if SCORE_BACK.checkForInput(SCORE_MOUSE_POS):
-                    score.close()
+                    session.close()
                     main_menu()
 
-        pygame.display.update()
-        
+        pygame.display.update()  # ✅ Cập nhật màn hình
+
 
 def main_menu():
     while True:
@@ -149,7 +155,7 @@ def main_menu():
                 if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
                     options()
                 if SCORE_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    high_score()
+                    show_high_score()
                 if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
                     pygame.quit()
                     sys.exit()

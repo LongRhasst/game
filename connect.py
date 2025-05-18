@@ -1,19 +1,10 @@
-import sqlite3
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-class CONNECT:
-    def __init__(self):
-        self.conn = sqlite3.connect('user.db3')
-        self.cursor = self.conn.cursor()
+DATABASE_URL = 'mysql+pymysql://root:123465@localhost:3306/game'
 
-    def insert(self, nickname, score):
-        self.cursor.execute("INSERT INTO users(name, score) VALUES (?, ?)", (nickname, score))
-        self.conn.commit()
+engine = create_engine(DATABASE_URL)
 
-    def select(self):
-        ranking = self.cursor.execute(
-            "SELECT id, name, score FROM users ORDER BY score DESC LIMIT 10"
-        ).fetchall()
-        return ranking
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    def close(self):
-        self.conn.close()
+Base = declarative_base()
