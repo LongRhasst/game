@@ -82,7 +82,7 @@ def options():
 def show_high_score():
     while True:
         SCORE_MOUSE_POS = pygame.mouse.get_pos()
-        SCREEN.blit(BG, (0, 0))  # ✅ Hiển thị background
+        SCREEN.blit(BG, (0, 0)) 
 
         SCORE_TEXT = get_font(45).render("HIGH SCORE", True, "#b68f40")
         SCORE_RECT = SCORE_TEXT.get_rect(center=(640, 100))
