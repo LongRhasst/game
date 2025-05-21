@@ -1,5 +1,4 @@
 import pygame
-import os
 
 class SoundManager:
     def __init__(self):
@@ -85,3 +84,19 @@ class SoundManager:
         pygame.mixer.music.stop()
         for sound in self.sounds.values():
             sound.stop()
+    
+    def update_game_sound_volumes(self):
+        """Update all in-game sound volumes to match current settings"""
+        # This method is useful when returning from options menu to ensure
+        # all sounds created elsewhere are updated with current volume settings
+        try:
+            # Update any sounds that might have been created outside sound manager
+            if pygame.mixer.get_init():
+                for i in range(pygame.mixer.get_num_channels()):
+                    channel = pygame.mixer.Channel(i)
+                    if self.muted:
+                        channel.set_volume(0)
+                    else:
+                        channel.set_volume(self.sfx_volume)
+        except Exception as e:
+            print(f"Failed to update sound volumes: {e}")

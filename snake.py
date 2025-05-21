@@ -37,9 +37,15 @@ SCREEN_UPDATE = pygame.USEREVENT
 pygame.time.set_timer(SCREEN_UPDATE, 150)
 
 class SNAKE:
-    def __init__(self):
+    def __init__(self, sound_manager=None):
         self.reset()
+        self.sound_manager = sound_manager
         self.crunch_sound = pygame.mixer.Sound('Sound/crunch.wav')
+        
+        # Set initial volume based on sound manager
+        if self.sound_manager:
+            volume = 0 if self.sound_manager.muted else self.sound_manager.sfx_volume
+            self.crunch_sound.set_volume(volume)
         
         # Load graphics
         self.head_up = pygame.image.load('Graphics/head_up.png').convert_alpha()
@@ -125,7 +131,15 @@ class SNAKE:
         self.new_block = True
 
     def play_crunch_sound(self):
-        self.crunch_sound.play()
+        # Use sound manager if available, otherwise play directly
+        if self.sound_manager:
+            # If we have sound manager, respect its settings
+            if not self.sound_manager.muted:
+                self.crunch_sound.set_volume(self.sound_manager.sfx_volume)
+                self.crunch_sound.play()
+        else:
+            # Default behavior without sound manager
+            self.crunch_sound.play()
 
 class FRUIT:
     def __init__(self):
@@ -141,8 +155,9 @@ class FRUIT:
         self.pos = Vector2(self.x, self.y)
 
 class MAIN:
-    def __init__(self):
-        self.snake = SNAKE()
+    def __init__(self, sound_manager=None):
+        self.sound_manager = sound_manager
+        self.snake = SNAKE(sound_manager)
         self.fruit = FRUIT()
         self.game_active = True
         self.restart_button = pygame.Rect(0, 0, 200, 50)
@@ -180,8 +195,17 @@ class MAIN:
                 self.game_over()
 
     def game_over(self):
-        pygame.mixer.music.stop()
-        pygame.mixer.Sound('Sound/game_over.mp3').play()
+        # Use sound manager if available
+        if self.sound_manager:
+            self.sound_manager.stop_bgm()
+            if not self.sound_manager.muted:
+                game_over_sound = pygame.mixer.Sound('Sound/game_over.mp3')
+                game_over_sound.set_volume(self.sound_manager.sfx_volume)
+                game_over_sound.play()
+        else:
+            pygame.mixer.music.stop()
+            pygame.mixer.Sound('Sound/game_over.mp3').play()
+        
         self.game_active = False
         score = len(self.snake.body) - 3
         
@@ -193,47 +217,103 @@ class MAIN:
     def save_score(self, score):
         save_screen = pygame.display.set_mode((800, 600))
         pygame.display.set_caption("Save Score")
-
+        
         font = pygame.font.Font(None, 60)
+        small_font = pygame.font.Font(None, 30)
         input_box = pygame.Rect(250, 300, 300, 60)
         color = pygame.Color('dodgerblue2')
         text = ''
         saving = True
-
+        error_message = None
+        score_saved = False
+        save_button = pygame.Rect(350, 400, 100, 50)
+        
         while saving:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-
+                
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        try:
-                            new_score = high_score(name=text, high_score=score)
-                            session.add(new_score)
-                            session.commit()
+                        # Try to save score
+                        if text:
+                            self._attempt_save_score(text, score)
+                            score_saved = True
                             saving = False
-                        except Exception as e:
-                            print(f"Error saving score: {e}")
                     elif event.key == pygame.K_BACKSPACE:
                         text = text[:-1]
+                    elif event.key == pygame.K_ESCAPE:
+                        saving = False
                     else:
-                        text += event.unicode
-
-            save_screen.fill((255, 255, 255))
-            prompt = font.render("Enter your name:", True, (0, 0, 0))
+                        # Limit name length
+                        if len(text) < 15:
+                            text += event.unicode
+                
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if save_button.collidepoint(mouse_pos):
+                        if text:
+                            self._attempt_save_score(text, score)
+                            score_saved = True
+                            saving = False
+            
+            save_screen.fill((175, 215, 70))
+            
+            # Title
+            title_surface = font.render("SAVE YOUR SCORE", True, (56, 74, 12))
+            save_screen.blit(title_surface, (250, 150))
+            
+            # Score display
+            score_text = f"Score: {score}"
+            score_surface = font.render(score_text, True, (56, 74, 12))
+            save_screen.blit(score_surface, (250, 200))
+            
+            # Input prompt
+            prompt = font.render("Enter your name:", True, (56, 74, 12))
             save_screen.blit(prompt, (250, 250))
-
+            
+            # Input box
             txt_surface = font.render(text, True, color)
-            input_box.w = max(300, txt_surface.get_width() + 10)
-            save_screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
             pygame.draw.rect(save_screen, color, input_box, 2)
-
+            save_screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+            
+            # Save button
+            pygame.draw.rect(save_screen, (50, 205, 50), save_button, border_radius=10)
+            save_text = small_font.render("SAVE", True, (255, 255, 255))
+            save_screen.blit(save_text, (save_button.x + 25, save_button.y + 15))
+            
+            # Instruction text
+            instruction_text = small_font.render("Press ENTER to save or ESC to skip", True, (56, 74, 12))
+            save_screen.blit(instruction_text, (250, 500))
+            
             pygame.display.flip()
             clock.tick(30)
-
+        
+        # Restore game screen
         screen = pygame.display.set_mode((cell_number * cell_size, cell_number * cell_size))
         self.show_game_over_screen()
+    
+    def _attempt_save_score(self, name, score):
+        # Helper method to attempt saving the score
+        try:
+            new_score = high_score(name=name, high_score=score)
+            session.add(new_score)
+            session.commit()
+            return True
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Error saving score: {error_msg}")
+            
+            # Try fallback to local file if database fails
+            try:
+                with open("local_scores.txt", "a") as f:
+                    f.write(f"{name},{score}\n")
+                print("Score saved to local file instead")
+                return True
+            except Exception as local_err:
+                print(f"Failed to save locally: {local_err}")
+                return False
 
     def show_game_over_screen(self):
         showing = True
