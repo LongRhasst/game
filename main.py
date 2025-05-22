@@ -86,7 +86,7 @@ def options():
     while True:
         OPTIONS_MOUSE_POS = pygame.mouse.get_pos()
 
-        SCREEN.fill("white")
+        SCREEN.blit(BG, (0, 0))
         
         OPTIONS_TEXT = get_font(45).render("SOUND OPTIONS", True, "Black")
         OPTIONS_RECT = OPTIONS_TEXT.get_rect(center=(640, 100))
@@ -97,6 +97,7 @@ def options():
         BGM_RECT = BGM_TEXT.get_rect(midleft=(300, 200))
         SCREEN.blit(BGM_TEXT, BGM_RECT)
         
+        # BGM Volume slider bar
         bgm_slider_bg = pygame.Rect(300, 250, 680, 20)
         pygame.draw.rect(SCREEN, "Gray", bgm_slider_bg)
         bgm_slider = pygame.Rect(300, 250, 680 * bgm_volume, 20)
@@ -107,16 +108,17 @@ def options():
         SFX_RECT = SFX_TEXT.get_rect(midleft=(300, 300))
         SCREEN.blit(SFX_TEXT, SFX_RECT)
         
+        # SFX Volume slider bar
         sfx_slider_bg = pygame.Rect(300, 350, 680, 20)
         pygame.draw.rect(SCREEN, "Gray", sfx_slider_bg)
         sfx_slider = pygame.Rect(300, 350, 680 * sfx_volume, 20)
         pygame.draw.rect(SCREEN, "#b68f40", sfx_slider)
         
-        # Draw test buttons for specific sounds
-        pygame.draw.rect(SCREEN, "Green", test_sound)
-        test_icon = get_font(20).render("►", True, "White")
-        test_icon_rect = test_icon.get_rect(center=test_sound.center)
-        SCREEN.blit(test_icon, test_icon_rect)
+        # # Draw test buttons for specific sounds
+        # pygame.draw.rect(SCREEN, "Green", test_sound)
+        # test_icon = get_font(20).render("►", True, "White")
+        # test_icon_rect = test_icon.get_rect(center=test_sound.center)
+        # SCREEN.blit(test_icon, test_icon_rect)
         
         # Crunch test button
         pygame.draw.rect(SCREEN, "Red", crunch_test_button)
