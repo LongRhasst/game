@@ -12,8 +12,8 @@ class SoundManager:
         # Default sound paths (adjust these to match your files)
         self.sound_files = {
             'eat': 'Sound/crunch.wav',
-            'game_over': 'Sound/game_over.wav',
-            'button_click': 'Sound/button_click.wav',
+            'game_over': 'Sound/game_over.mp3',
+            'button_click': 'Sound/click.mp3',
             'bgm': 'Sound/bgm.mp3'
         }
         

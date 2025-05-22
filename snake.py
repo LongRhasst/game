@@ -36,6 +36,173 @@ except:
 SCREEN_UPDATE = pygame.USEREVENT
 pygame.time.set_timer(SCREEN_UPDATE, 150)
 
+class OBSTACLE:
+    def __init__(self, snake_body, fruit_pos):
+        self.obstacles = []
+        self.obstacle_count = 0
+        self.debug_mode = True  # Set to True for debugging output
+        
+        # Load the stone image for obstacles
+        try:
+            self.stone_image = pygame.image.load('Graphics/stone.png').convert_alpha()
+            if self.debug_mode:
+                print("Stone image loaded successfully")
+        except Exception as e:
+            self.stone_image = None
+            print(f"Error loading stone image: {e}")
+            print("Creating fallback obstacle graphics")
+            
+            # Create a distinctive fallback surface
+            self.fallback_surface = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+            self.fallback_surface.fill((100, 50, 50))  # Reddish-brown color
+            
+            # Add clear markings to the fallback surface
+            pygame.draw.rect(self.fallback_surface, (50, 20, 20), 
+                            pygame.Rect(0, 0, cell_size, cell_size), 4)
+            pygame.draw.line(self.fallback_surface, (200, 50, 50), 
+                            (0, 0), (cell_size, cell_size), 3)
+            pygame.draw.line(self.fallback_surface, (200, 50, 50), 
+                            (cell_size, 0), (0, cell_size), 3)
+            
+        # Generate obstacles with structured patterns instead of random
+        self.generate_structured_obstacles(snake_body, fruit_pos)
+    
+    def generate_structured_obstacles(self, snake_body, fruit_pos):
+        """Generate obstacles in structured patterns including straight lines"""
+        self.obstacles.clear()
+        
+        # Create at least 3 straight lines with 4 obstacles each
+        self._create_structured_lines(snake_body, fruit_pos)
+        
+        # Add some additional random obstacles if needed
+        remaining_obstacles = 20 - len(self.obstacles)
+        if remaining_obstacles > 0:
+            self._add_random_obstacles(snake_body, fruit_pos, remaining_obstacles)
+            
+        self.obstacle_count = len(self.obstacles)
+        if self.debug_mode:
+            print(f"Total obstacles: {len(self.obstacles)}")
+            
+    def _create_structured_lines(self, snake_body, fruit_pos):
+        """Create at least 3 straight lines with 4 obstacles each"""
+        # Define potential line configurations (try more configurations than needed)
+        line_configs = [
+            # Horizontal lines (x, y, length, direction)
+            {'start_x': 2, 'start_y': 5, 'length': 4, 'horizontal': True},
+            {'start_x': 14, 'start_y': 8, 'length': 4, 'horizontal': True},
+            {'start_x': 6, 'start_y': 12, 'length': 4, 'horizontal': True},
+            {'start_x': 10, 'start_y': 16, 'length': 4, 'horizontal': True},
+            
+            # Vertical lines (x, y, length, direction)
+            {'start_x': 5, 'start_y': 2, 'length': 4, 'horizontal': False},
+            {'start_x': 15, 'start_y': 3, 'length': 4, 'horizontal': False},
+            {'start_x': 10, 'start_y': 10, 'length': 4, 'horizontal': False},
+            {'start_x': 8, 'start_y': 14, 'length': 4, 'horizontal': False}
+        ]
+        
+        # Shuffle the configurations to get different patterns each time
+        random.shuffle(line_configs)
+        
+        lines_created = 0
+        for config in line_configs:
+            # Try to create this line
+            if self._try_create_line(config, snake_body, fruit_pos):
+                lines_created += 1
+                # Stop once we've created at least 3 lines
+                if lines_created >= 3:
+                    break
+    
+    def _try_create_line(self, config, snake_body, fruit_pos):
+        """Try to create a line according to the given configuration"""
+        # Extract configuration
+        start_x = config['start_x']
+        start_y = config['start_y']
+        length = config['length']
+        horizontal = config['horizontal']
+        
+        # Check if line can be placed
+        positions = []
+        for i in range(length):
+            if horizontal:
+                pos = Vector2(start_x + i, start_y)
+            else:
+                pos = Vector2(start_x, start_y + i)
+                
+            # Check boundaries
+            if not (0 <= pos.x < cell_number and 0 <= pos.y < cell_number):
+                return False
+                
+            # Check if position is already occupied
+            if pos in snake_body or pos == fruit_pos or pos in self.obstacles:
+                return False
+                
+            positions.append(pos)
+        
+        # If we got here, the line can be placed
+        self.obstacles.extend(positions)
+        
+        if self.debug_mode:
+            line_type = "horizontal" if horizontal else "vertical"
+            print(f"Created {line_type} line at ({start_x}, {start_y}) with length {length}")
+        
+        return True
+        
+    def _add_random_obstacles(self, snake_body, fruit_pos, count):
+        """Add random obstacles to fill up to the desired count"""
+        for i in range(count):
+            attempts = 0
+            while attempts < 100:  # Limit attempts to prevent infinite loop
+                pos = Vector2(random.randint(0, cell_number - 1), random.randint(0, cell_number - 1))
+                
+                # Check if position is valid (not on snake, fruit, or existing obstacle)
+                if pos not in snake_body and pos != fruit_pos and pos not in self.obstacles:
+                    self.obstacles.append(pos)
+                    if self.debug_mode:
+                        print(f"Random obstacle added at {pos}")
+                    break
+                
+                attempts += 1
+    
+    def generate_obstacles(self, snake_body, fruit_pos, count=0):
+        """Legacy method kept for compatibility"""
+        self.generate_structured_obstacles(snake_body, fruit_pos)
+    
+    def draw_obstacles(self):
+        """Draw all obstacles on the screen"""
+        if not self.obstacles and self.debug_mode:
+            print("No obstacles to draw")
+            
+        for obstacle in self.obstacles:
+            obstacle_rect = pygame.Rect(int(obstacle.x * cell_size), int(obstacle.y * cell_size), cell_size, cell_size)
+            
+            if self.stone_image:
+                # Use the stone image
+                screen.blit(self.stone_image, obstacle_rect)
+            else:
+                # Draw a very visible fallback
+                if hasattr(self, 'fallback_surface'):
+                    screen.blit(self.fallback_surface, obstacle_rect)
+                else:
+                    # Even more basic fallback
+                    pygame.draw.rect(screen, (255, 0, 0), obstacle_rect)  # Bright red
+                    pygame.draw.rect(screen, (0, 0, 0), obstacle_rect, 3)  # Black border
+                    # Add X marking
+                    pygame.draw.line(screen, (0, 0, 0), 
+                                   (obstacle_rect.left, obstacle_rect.top), 
+                                   (obstacle_rect.right, obstacle_rect.bottom), 4)
+                    pygame.draw.line(screen, (0, 0, 0), 
+                                   (obstacle_rect.left, obstacle_rect.bottom), 
+                                   (obstacle_rect.right, obstacle_rect.top), 4)
+    
+    def check_collision(self, pos):
+        """Check if the given position collides with any obstacle"""
+        return pos in self.obstacles
+    
+    def increase_difficulty(self, score, snake_body, fruit_pos):
+        """Add obstacles as score increases"""
+        # Method kept for backwards compatibility
+        pass
+
 class SNAKE:
     def __init__(self, sound_manager=None):
         self.reset()
@@ -159,18 +326,26 @@ class MAIN:
         self.sound_manager = sound_manager
         self.snake = SNAKE(sound_manager)
         self.fruit = FRUIT()
+        self.obstacles = OBSTACLE(self.snake.body, self.fruit.pos)
         self.game_active = True
         self.restart_button = pygame.Rect(0, 0, 200, 50)
         self.menu_button = pygame.Rect(0, 0, 200, 50)
+        self.score = 0
 
     def update(self):
         if self.game_active:
             self.snake.move_snake()
             self.check_collision()
             self.check_fail()
+            
+            # Update score without changing obstacles
+            current_score = len(self.snake.body) - 3
+            if current_score > self.score:
+                self.score = current_score
 
     def draw_elements(self):
         self.draw_grass()
+        self.obstacles.draw_obstacles()  # Draw obstacles
         self.fruit.draw_fruit()
         self.snake.draw_snake()
         self.draw_score()
@@ -181,18 +356,24 @@ class MAIN:
             self.snake.add_block()
             self.snake.play_crunch_sound()
             
-            for block in self.snake.body[1:]:
-                if block == self.fruit.pos:
-                    self.fruit.randomize()
+            # Make sure fruit doesn't appear on snake or obstacles
+            while self.fruit.pos in self.snake.body or self.fruit.pos in self.obstacles.obstacles:
+                self.fruit.randomize()
 
     def check_fail(self):
         head = self.snake.body[0]
+        # Check boundary collision
         if not (0 <= head.x < cell_number) or not (0 <= head.y < cell_number):
             self.game_over()
         
+        # Check snake self collision
         for block in self.snake.body[1:]:
             if block == head:
                 self.game_over()
+        
+        # Check obstacle collision
+        if self.obstacles.check_collision(head):
+            self.game_over()
 
     def game_over(self):
         # Use sound manager if available
@@ -341,7 +522,7 @@ class MAIN:
             overlay = pygame.Surface((cell_number * cell_size, cell_number * cell_size), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 180))
             screen.blit(overlay, (0, 0))
-            
+
             # Game over text
             font = pygame.font.Font(None, 72)
             game_over_surface = font.render("GAME OVER", True, (255, 255, 255))
@@ -389,7 +570,7 @@ class MAIN:
         score_rect = score_surface.get_rect(center=(score_x, score_y))
         apple_rect = apple.get_rect(midright=(score_rect.left, score_rect.centery))
         bg_rect = pygame.Rect(apple_rect.left, apple_rect.top, 
-                            apple_rect.width + score_rect.width + 6, apple_rect.height)
+                           apple_rect.width + score_rect.width + 6, apple_rect.height)
 
         pygame.draw.rect(screen, (167, 209, 61), bg_rect)
         screen.blit(score_surface, score_rect)
@@ -399,6 +580,8 @@ class MAIN:
     def restart_game(self):
         self.snake.reset()
         self.fruit.randomize()
+        self.obstacles = OBSTACLE(self.snake.body, self.fruit.pos)  # Reset obstacles
+        self.score = 0  # Reset score
         self.game_active = True
 
     def go_to_main_menu(self):
